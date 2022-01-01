@@ -7,18 +7,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alexzorin/authy"
-	homedir "github.com/mitchellh/go-homedir"
-)
-
-const (
-	configFileName = ".authy.json"
-	cacheFileName  = ".authycache.json"
+	"github.com/zalando/go-keyring"
 )
 
 // DeviceRegistration device register info
@@ -35,10 +29,6 @@ type NewDeviceConfig struct {
 	CountryCode string
 	Mobile      string
 	Password    string
-
-	ConfigFilePath string
-	ConfigFileName string
-	CacheFileName  string
 }
 
 // Device ..
@@ -51,14 +41,6 @@ type Device struct {
 
 // NewDevice ..
 func NewDevice(conf NewDeviceConfig) *Device {
-	if len(conf.ConfigFileName) == 0 {
-		conf.ConfigFileName = configFileName
-	}
-
-	if len(conf.CacheFileName) == 0 {
-		conf.CacheFileName = cacheFileName
-	}
-
 	d := &Device{
 		conf: conf,
 	}
@@ -75,6 +57,13 @@ func (d *Device) RegisterOrGetDeviceInfo() (devInfo DeviceRegistration) {
 		d.registration = devInfo
 		return
 	}
+
+	_, err = keyring.Get("authy", "test")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 
 	err = os.ErrNotExist
 
@@ -236,51 +225,27 @@ func (d *Device) newRegistrationDevice() (devInfo DeviceRegistration, err error)
 
 // SaveDeviceInfo ..
 func (d *Device) SaveDeviceInfo() (err error) {
-	regrPath, err := d.ConfigPath(configFileName)
+	res, err := json.Marshal(d.registration)
 	if err != nil {
 		return
 	}
 
-	f, err := os.OpenFile(regrPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	err = keyring.Set("authy", d.conf.Mobile, string(res))
 	if err != nil {
 		return
 	}
-
-	defer f.Close()
-	err = json.NewEncoder(f).Encode(d.registration)
 	return
 }
 
 // LoadExistingDeviceInfo ...
 func (d *Device) LoadExistingDeviceInfo() (devInfo DeviceRegistration, err error) {
-	devPath, err := d.ConfigPath(configFileName)
-	if err != nil {
-		log.Println("Get device info file path failed", err)
-		os.Exit(1)
-	}
-
-	f, err := os.Open(devPath)
+	res, err := keyring.Get("authy", d.conf.Mobile)
 	if err != nil {
 		return
 	}
-	defer f.Close()
 
-	err = json.NewDecoder(f).Decode(&devInfo)
+	err = json.Unmarshal([]byte(res), &devInfo)
 	return
-}
-
-// ConfigPath get config file path
-func (d *Device) ConfigPath(fname string) (string, error) {
-	if len(d.conf.ConfigFilePath) == 0 {
-		devPath, err := homedir.Dir()
-		if err != nil {
-			return "", err
-		}
-
-		d.conf.ConfigFilePath = devPath
-	}
-
-	return filepath.Join(d.conf.ConfigFilePath, fname), nil
 }
 
 // DeleteMainPassword delete main password

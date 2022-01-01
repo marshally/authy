@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alexzorin/authy"
+	"github.com/zalando/go-keyring"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -64,21 +65,12 @@ func (d *Device) LoadTokenFromCache() (err error) {
 		}
 	}()
 
-	fpath, err := d.ConfigPath(d.conf.CacheFileName)
+	res, err := keyring.Get("authy", d.conf.Mobile)
 	if err != nil {
 		return
 	}
 
-	f, err := os.Open(fpath)
-	if err != nil {
-		return
-	}
-
-	defer f.Close()
-	err = json.NewDecoder(f).Decode(&d.tokens)
-	if err != nil {
-		return
-	}
+	err = json.Unmarshal([]byte(res), &d.tokens)
 
 	d.tokenMap = tokensToMap(d.tokens)
 
@@ -175,22 +167,19 @@ func tokensToMap(tks []*Token) map[string]*Token {
 }
 
 func (d *Device) saveToken() {
-	regrPath, err := d.ConfigPath(cacheFileName)
-	if err != nil {
-		return
-	}
-
-	f, err := os.OpenFile(regrPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-	if err != nil {
-		return
-	}
-
-	defer f.Close()
-
 	tokens := make([]Token, 0, len(d.tokenMap))
 	for _, v := range d.tokenMap {
 		tokens = append(tokens, *v)
 	}
-	err = json.NewEncoder(f).Encode(tokens)
+
+	res, err := json.Marshal(tokens)
+	if err != nil {
+		return
+	}
+
+	err = keyring.Set("authy", d.conf.Mobile, string(res))
+	if err != nil {
+		return
+	}
 	return
 }
