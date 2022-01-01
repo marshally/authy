@@ -58,13 +58,6 @@ func (d *Device) RegisterOrGetDeviceInfo() (devInfo DeviceRegistration) {
 		return
 	}
 
-	_, err = keyring.Get("authy", "test")
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-
 	err = os.ErrNotExist
 
 	if os.IsNotExist(err) {
