@@ -223,7 +223,7 @@ func (d *Device) SaveDeviceInfo() (err error) {
 		return
 	}
 
-	err = keyring.Set("authy", d.conf.Mobile, string(res))
+	err = keyring.Set("authy", d.conf.Mobile+"-deviceInfo", string(res))
 	if err != nil {
 		return
 	}
@@ -232,7 +232,7 @@ func (d *Device) SaveDeviceInfo() (err error) {
 
 // LoadExistingDeviceInfo ...
 func (d *Device) LoadExistingDeviceInfo() (devInfo DeviceRegistration, err error) {
-	res, err := keyring.Get("authy", d.conf.Mobile)
+	res, err := keyring.Get("authy", d.conf.Mobile+"-deviceInfo")
 	if err != nil {
 		return
 	}

@@ -65,7 +65,7 @@ func (d *Device) LoadTokenFromCache() (err error) {
 		}
 	}()
 
-	res, err := keyring.Get("authy", d.conf.Mobile)
+	res, err := keyring.Get("authy", d.conf.Mobile+"-tokens")
 	if err != nil {
 		return
 	}
@@ -177,7 +177,7 @@ func (d *Device) saveToken() {
 		return
 	}
 
-	err = keyring.Set("authy", d.conf.Mobile, string(res))
+	err = keyring.Set("authy", d.conf.Mobile+"-tokens", string(res))
 	if err != nil {
 		return
 	}
