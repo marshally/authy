@@ -1,4 +1,4 @@
-module github.com/momaek/authy
+module github.com/marshally/authy
 
 go 1.15
 
